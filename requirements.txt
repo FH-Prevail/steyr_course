@@ -1,0 +1,14 @@
+# Session 4 runs in Google Colab, which has all of these already. To run it on your own computer:
+numpy
+pandas>=2.0
+matplotlib
+statsmodels
+scikit-learn>=1.2
+lightgbm>=4.0
+# only to rebuild the evidence, the notebooks and the slides (lecturer)
+nbformat
+nbclient
+ipykernel
+python-pptx
+qrcode
+Pillow
