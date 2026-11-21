@@ -155,6 +155,39 @@ R["nb1"]["series_2025"] = {"weeks": [d.strftime("%d %b") for d in tst["week_star
                            "Actual sales": tst["units"].astype(int).tolist(),
                            **{m: [f(v, 0) for v in tst[m]] for m in n1["methods"]}}
 
+# what a metric is: five real weeks of 2024, forecast by the tree of the depth chosen on 2024 (the slide after "Deeper Is Not Better")
+from sklearn.tree import DecisionTreeRegressor as _DT  # noqa: E402
+_lrn, _chk, _inp = n1["learn"], n1["check"], n1["inputs"]
+_t3 = _DT(max_depth=int(n1["best_depth"]), random_state=42).fit(_lrn[_inp], _lrn["units"])
+_c = _chk.assign(fc=_t3.predict(_chk[_inp]))
+assert abs(score(_c["units"], _c["fc"])["WAPE"] - R["nb1"]["best_depth_wape"]) < 0.05, "the depth chosen on 2024 does not reproduce"
+_w = _c[(_c["week_start"] >= "2024-05-27") & (_c["week_start"] <= "2024-06-24")]
+_sold, _fc = _w["units"].astype(int).tolist(), [int(round(v)) for v in _w["fc"]]
+_miss = [a - b for a, b in zip(_fc, _sold)]
+R["metric_demo"] = {"weeks": [d.strftime("%d %b") for d in _w["week_start"]], "first": str(_w["week_start"].min().date()),
+                    "last": str(_w["week_start"].max().date()), "depth": int(n1["best_depth"]),
+                    "sold": _sold, "forecast": _fc, "miss": _miss, "size": [abs(m) for m in _miss],
+                    "sold_sum": sum(_sold), "forecast_sum": sum(_fc), "size_sum": sum(abs(m) for m in _miss),
+                    "wape": f(sum(abs(m) for m in _miss) / sum(_sold) * 100), "mae": f(sum(abs(m) for m in _miss) / len(_miss), 0),
+                    "bias": f(sum(_miss) / len(_miss), 0), "per100": int(round(sum(abs(m) for m in _miss) / sum(_sold) * 100)),
+                    "biggest_week": _w["week_start"].iloc[int(np.argmax([abs(m) for m in _miss]))].strftime("%d %b"),
+                    "year_wape": R["nb1"]["best_depth_wape"]}
+
+# underfitting and overfitting: ice tea weeks without a promotion, temperature only; learn 2023, check 2024
+_q = n1["ice_all"][n1["ice_all"]["discount_pct"] == 0]
+_qa, _qb = _q[_q["week_start"].dt.year == 2023], _q[_q["week_start"].dt.year == 2024]
+_X = lambda d: d[["temp_forecast"]]
+_new = {d: score(_qb["units"], _DT(max_depth=d, random_state=42).fit(_X(_qa), _qa["units"]).predict(_X(_qb)))["WAPE"] for d in range(1, 9)}
+_best = min(_new, key=_new.get)
+_grid = np.round(np.arange(-5, 35.001, 0.25), 2)
+R["fit_demo"] = {"grid": _grid.tolist(), "points": [[f(a), int(b)] for a, b in zip(_qa["temp_forecast"], _qa["units"])],
+                 "n_learn": len(_qa), "n_new": len(_qb), "best_depth": int(_best), "fits": {}}
+for _key, _d in (("under", 1), ("right", int(_best)), ("over", None)):
+    _m = _DT(max_depth=_d, random_state=42).fit(_X(_qa), _qa["units"])
+    R["fit_demo"]["fits"][_key] = {"depth": _d, "leaves": int(_m.get_n_leaves()),
+                                   "learn": score(_qa["units"], _m.predict(_X(_qa)))["WAPE"], "new": score(_qb["units"], _m.predict(_X(_qb)))["WAPE"],
+                                   "curve": [f(v) for v in _m.predict(pd.DataFrame({"temp_forecast": _grid}))]}
+
 # the tiny split example: six real weeks of ice tea without a promotion, spread over the temperatures
 quiet = ice[ice["discount_pct"] == 0].sort_values("temp_forecast")
 picks = []

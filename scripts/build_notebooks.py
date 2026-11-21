@@ -70,16 +70,44 @@ The data is synthetic: a drinks wholesaler in Upper Austria, built to look like 
 """)
 
 
-FIRST = code(f'''
+LOAD = f'''
+DATA = "{RAW}"   # the course data on GitHub
+if Path("data/drinks_weekly.csv").exists():      # a copy next to the notebook (Google Drive or upload) is used first
+    DATA = "data"
+'''.strip("\n")
+
+# notebook 1 only: the same cell, with the three ways to bring a file into Colab written out
+LOAD_THREE_WAYS = f'''
+# Three ways to bring a file into Colab (the table above). Way 1 runs as it is.
+
+# Way 1, a link: pandas reads the file straight from its address on GitHub. Nothing to set up.
+DATA = "{RAW}"
+if Path("data/drinks_weekly.csv").exists():      # outside Colab: a data folder next to the notebook is used first
+    DATA = "data"
+
+# Way 2, upload: click the folder icon on the left and drag drinks_weekly.csv into the panel.
+# Then delete the # in front of the next line and run this cell again.
+# DATA = "."
+
+# Way 3, Google Drive: put drinks_weekly.csv into "My Drive". Then delete the # in front of the
+# next three lines and run this cell again. Colab asks for your permission first.
+# from google.colab import drive
+# drive.mount("/content/drive")
+# DATA = "/content/drive/MyDrive"
+
+# Whichever way you took, the same line reads the file into the table called sales.
+'''.strip("\n")
+
+
+def first(load):
+    return code(f'''
 # Start here: run this cell first. It loads the course data (one small table) and sets up the charts.
 from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-DATA = "{RAW}"   # the course data on GitHub
-if Path("data/drinks_weekly.csv").exists():      # a copy next to the notebook (Google Drive or upload) is used first
-    DATA = "data"
+{load}
 sales = pd.read_csv(f"{{DATA}}/drinks_weekly.csv", parse_dates=["week_start"])
 sales["product"] = sales["product"].astype(object)   # plain text labels: the regression formula works with every pandas version
 
@@ -92,6 +120,25 @@ print("Ready:", len(sales), "rows,", sales["product"].nunique(), "products, week
       sales["week_start"].min().date(), "to", sales["week_start"].max().date())
 # CHECK: Ready: {{{{data.rows}}}} rows, {{{{data.products}}}} products, weeks from {{{{data.first_week}}}} to {{{{data.last_week}}}}
 ''')
+
+
+FIRST = first(LOAD)
+
+THREE_WAYS = md(f"""
+## Start: three ways to bring data into Colab
+
+Colab runs on a computer at Google, not on yours. A file has to get there before pandas can read it. There are three ways, and the cell below shows all three.
+
+| Way | What you do | Is the file still there next time? | Good for |
+|---|---|---|---|
+| **1. A link** | nothing: pandas reads the file from its web address | yes, it stays on the web | public data, like our course data |
+| **2. Upload** | click the **folder icon** on the left and drag the file into the panel | no, it is deleted when the session ends | a quick look at a file from your computer |
+| **3. Google Drive** | put the file into your Drive and connect the Drive to the notebook | yes, it stays in your Drive | your project: your own data, used again and again |
+
+**Today we use way 1**, so the cell runs as it is. To try way 2 or 3 you need the file on your computer first: open [drinks_weekly.csv on GitHub](https://github.com/{REPO}/blob/main/data/drinks_weekly.csv) and click **Download raw file**, the arrow at the top right of the table. The file must keep its name, `drinks_weekly.csv`.
+
+Whichever way you take, the result is the same table, called `sales`.
+""")
 
 SCORE_SRC = '''
 def score(actual, forecast):
@@ -127,7 +174,8 @@ NB1 = [
 - grow your first decision tree and read its rules,
 - test both on 2025, a year they have never seen, and find out how deep a tree should grow.
 """),
-    FIRST,
+    THREE_WAYS,
+    first(LOAD_THREE_WAYS),
     CONTEXT,
     md("""
 ## 1. The data
@@ -220,7 +268,7 @@ ax.legend()
 plt.show()
 '''),
     md("""
-**What to see.** The line is too high between about 5 and 18 °C, too low in hot weeks, and below zero in frost. One slope for all temperatures is the problem: how much one more degree adds depends on how warm it already is.
+**What to see.** The line is too high between about 5 and 18 °C, far too low in the hot weeks with a promotion (the highest dots), and below zero in frost. One slope for all temperatures is the problem: how much one more degree adds depends on how warm it already is.
 
 ## 4. Your first decision tree
 
@@ -968,6 +1016,7 @@ for key, part in (table.groupby(group) if group else [("your series", table)]):
     expected = pd.date_range(part[date_column].min(), part[date_column].max(), freq=frequency)
     assert len(expected) == len(part) and (expected == pd.DatetimeIndex(part[date_column])).all(), \\
         f"{{key}}: periods are missing or do not match frequency={{frequency!r}}. shift() counts rows, so every period must be there once."
+file_columns = list(table.columns)                     # the columns of your file, before the template adds its own
 print("rows and columns:", table.shape)
 print("from", table[date_column].min().date(), "to", table[date_column].max().date(), "|", table[group].nunique() if group else 1, "series")
 table.head()
@@ -986,6 +1035,7 @@ lags = [1, seasonal_lag]     # EDIT: history inputs, in periods back; 1 = the pe
 window = 4                   # EDIT: the average of the last 4 periods
 extra_categories = []        # EDIT: number columns that are really labels (a store number, a route code)
 
+table = table[file_columns].copy()       # start from the columns of your file, so you can run this cell again after an edit
 assert lags and all(type(k) is int and k > 0 for k in lags) and len(set(lags)) == len(lags), "lags: different whole numbers above 0."
 assert type(window) is int and window > 0, "window: a whole number above 0."
 absent = [c for c in known_inputs + not_known if c not in table.columns]
