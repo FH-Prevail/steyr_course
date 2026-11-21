@@ -2,7 +2,7 @@
 
 **Advanced Data Analysis Techniques · Master Supply Chain Management · FH OÖ Steyr · Sina Mirshahi**
 
-Course material for session 4: the slides, four Colab notebooks and one synthetic dataset. One question carries the session: **what will next week bring, and under which conditions does it change?** You learn one method family in depth, tree-based models (a decision tree, a random forest, LightGBM): when to use them instead of a regression or clustering, how to test a forecast fairly, how to spot faulty inputs and outputs, also in code an AI wrote for you, and how to explain a forecast.
+Course material for session 4: the slides, three Colab notebooks and one synthetic dataset. One question carries the session: **what will next week bring, and under which conditions does it change?** You learn one method family in depth, tree-based models (a decision tree, a random forest, LightGBM): when to use them instead of a regression or clustering, how to test a forecast fairly, how to spot faulty inputs and outputs, also in code an AI wrote for you, and how to explain a forecast.
 
 ## Slides
 
@@ -15,14 +15,12 @@ Course material for session 4: the slides, four Colab notebooks and one syntheti
 | [1 · From A Straight Line To A Tree](notebooks/1_line_to_tree.ipynb) | Hands-on 1: the straight line from session 2 against your first decision tree, for ice tea; how deep a tree should grow | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/1_line_to_tree.ipynb) |
 | [2 · Many Trees: Forest And Boosting](notebooks/2_forest_and_boosting.ipynb) | Hands-on 2: a random forest and LightGBM for all eight products, tested on 2025 against a benchmark and the regression | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/2_forest_and_boosting.ipynb) |
 | [3 · Check And Explain](notebooks/3_check_and_explain.ipynb) | Hands-on 3: check code an AI wrote, see what a tree cannot do, and explain a forecast | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/3_check_and_explain.ipynb) |
-| [4 · Project Template: Forecasting With Trees](notebooks/4_project_template.ipynb) | Your project: the same steps for your own table, with every check, mapped to the report criteria | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/4_project_template.ipynb) |
 
 If a button does not open, copy the address instead:
 
 - https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/1_line_to_tree.ipynb
 - https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/2_forest_and_boosting.ipynb
 - https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/3_check_and_explain.ipynb
-- https://colab.research.google.com/github/FH-Prevail/steyr_course/blob/main/notebooks/4_project_template.ipynb
 
 Or open Colab and choose **File, Open notebook, GitHub**, type `FH-Prevail/steyr_course` and pick the notebook.
 
@@ -50,7 +48,7 @@ The trees win where the weather and the promotions bend the sales; for orange ju
 
 ## Your project
 
-If you choose tree-based models for your project, start from [notebook 4, the project template](notebooks/4_project_template.ipynb). Run it once unchanged on the course data, then change the `# EDIT` lines to your own table, one section at a time. Its sections follow the report criteria of the course:
+If you choose tree-based models for your project, you get notebook 4, the project template, from me: write to me and I send it to you. Run it once unchanged on the course data, then change the `# EDIT` lines to your own table, one section at a time. Its sections follow the report criteria of the course:
 
 | Report criterion | Weight | Template section |
 |---|---|---|
@@ -64,7 +62,7 @@ Share only data you are allowed to share with Colab and with an AI tool, and say
 
 ## How the numbers were made
 
-`analysis/build_evidence.py` executes the code cells of the four notebooks on the data and freezes what they print into `evidence/results.json`; the slides and the `# CHECK` lines read that file, so they show exactly what the notebooks compute. To rebuild on your own computer:
+`analysis/build_evidence.py` executes the code cells of the notebooks on the data and freezes what they print into `evidence/results.json`; the slides and the `# CHECK` lines read that file, so they show exactly what the notebooks compute. To rebuild on your own computer:
 
 ```bash
 python3 -m pip install -r requirements.txt

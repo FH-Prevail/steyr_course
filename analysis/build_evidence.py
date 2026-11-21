@@ -376,19 +376,22 @@ R["faulty"] = {"reg_min": int(round(neg["Linear regression"])), "reg_min_product
                "lgbm_min_actual": int(t2.loc[t2["LightGBM"].idxmin(), "units"])}
 
 # ------------------------------------------------------------------ notebook 4 (the project template on the course data)
-n4 = run(4)
-res4 = n4["results"]
-_d4 = n4["dates"]
-R["nb4"] = {"fit_rows": int(n4["is_fit"].sum()), "fit_from": str(_d4[n4["is_fit"]].min().date()),
-            "valid_rows": int(n4["is_valid"].sum()), "valid_from": str(_d4[n4["is_valid"]].min().date()),
-            "test_rows": int(n4["is_test"].sum()), "test_from": str(_d4[n4["is_test"]].min().date()),
-            "chosen": n4["chosen_method"], "valid_wape": {m: f(v) for m, v in n4["validation"]["WAPE, %"].items()},
-            "valid_wape_chosen": f(n4["validation"].loc[n4["chosen_method"], "WAPE, %"]),
-            "valid_lgbm": f(n4["validation"].loc["LightGBM", "WAPE, %"]),
-            "test_wape": {m: f(v) for m, v in n4["results"]["WAPE, %"].items()},
-            "experiment_wape": f(score(n4["y_all"][n4["is_valid"]], n4["policy"](n4["exp"].predict(n4["X_exp"][n4["is_valid"]])))["WAPE"]),
-            "next_week": str(n4["next_period"]["week_start"].iloc[0].date()),
-            "next_water": float(n4["next_period"].set_index("product").loc["Mineral water", "forecast"])}
+if 4 in B.NOTEBOOKS:
+    n4 = run(4)
+    res4 = n4["results"]
+    _d4 = n4["dates"]
+    R["nb4"] = {"fit_rows": int(n4["is_fit"].sum()), "fit_from": str(_d4[n4["is_fit"]].min().date()),
+                "valid_rows": int(n4["is_valid"].sum()), "valid_from": str(_d4[n4["is_valid"]].min().date()),
+                "test_rows": int(n4["is_test"].sum()), "test_from": str(_d4[n4["is_test"]].min().date()),
+                "chosen": n4["chosen_method"], "valid_wape": {m: f(v) for m, v in n4["validation"]["WAPE, %"].items()},
+                "valid_wape_chosen": f(n4["validation"].loc[n4["chosen_method"], "WAPE, %"]),
+                "valid_lgbm": f(n4["validation"].loc["LightGBM", "WAPE, %"]),
+                "test_wape": {m: f(v) for m, v in n4["results"]["WAPE, %"].items()},
+                "experiment_wape": f(score(n4["y_all"][n4["is_valid"]], n4["policy"](n4["exp"].predict(n4["X_exp"][n4["is_valid"]])))["WAPE"]),
+                "next_week": str(n4["next_period"]["week_start"].iloc[0].date()),
+                "next_water": float(n4["next_period"].set_index("product").loc["Mineral water", "forecast"])}
+else:                                             # no project template in this copy: keep its numbers as they are
+    R["nb4"] = json.loads((ROOT / "evidence" / "results.json").read_text(encoding="utf-8"))["nb4"]
 
 # ------------------------------------------------------------------ software, for the record
 import sklearn, lightgbm, statsmodels  # noqa: E402,E401

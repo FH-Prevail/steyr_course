@@ -107,7 +107,7 @@ def run(n):
 
 
 if __name__ == "__main__":
-    which = [int(a) for a in sys.argv[1:]] or sorted(NB_NAMES)
+    which = [int(a) for a in sys.argv[1:]] or sorted(n for n in NB_NAMES if (ROOT / "notebooks" / NB_NAMES[n]).exists())
     bad = 0
     for n in which:
         secs, problems = run(n)

@@ -11,7 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from build_notebooks import REPO, NB_NAMES, NB_TITLES, colab_url  # noqa: E402
+from build_notebooks import REPO, NB_NAMES, NB_TITLES, ON_COURSE_PAGE, colab_url  # noqa: E402
 
 R = json.loads((ROOT / "evidence" / "results.json").read_text(encoding="utf-8"))
 D, N2 = R["data"], R["nb2"]
@@ -24,14 +24,16 @@ WHAT = {1: "Hands-on 1: the straight line from session 2 against your first deci
         3: "Hands-on 3: check code an AI wrote, see what a tree cannot do, and explain a forecast",
         4: "Your project: the same steps for your own table, with every check, mapped to the report criteria"}
 
-nb_rows = "\n".join(f"| [{NB_TITLES[n]}](notebooks/{NB_NAMES[n]}) | {WHAT[n]} | [![Open In Colab]({BADGE})]({colab_url(n)}) |" for n in NB_NAMES)
-nb_links = "\n".join(f"- {colab_url(n)}" for n in NB_NAMES)
+TEMPLATE = (f"start from [notebook 4, the project template](notebooks/{NB_NAMES[4]})." if 4 in ON_COURSE_PAGE else
+            "you get notebook 4, the project template, from me: write to me and I send it to you.")
+nb_rows = "\n".join(f"| [{NB_TITLES[n]}](notebooks/{NB_NAMES[n]}) | {WHAT[n]} | [![Open In Colab]({BADGE})]({colab_url(n)}) |" for n in ON_COURSE_PAGE)
+nb_links = "\n".join(f"- {colab_url(n)}" for n in ON_COURSE_PAGE)
 
 readme = f"""# Session 4 · Forecasting With Tree-Based Models
 
 **Advanced Data Analysis Techniques · Master Supply Chain Management · FH OÖ Steyr · Sina Mirshahi**
 
-Course material for session 4: the slides, four Colab notebooks and one synthetic dataset. One question carries the session: **what will next week bring, and under which conditions does it change?** You learn one method family in depth, tree-based models (a decision tree, a random forest, LightGBM): when to use them instead of a regression or clustering, how to test a forecast fairly, how to spot faulty inputs and outputs, also in code an AI wrote for you, and how to explain a forecast.
+Course material for session 4: the slides, {'four' if 4 in ON_COURSE_PAGE else 'three'} Colab notebooks and one synthetic dataset. One question carries the session: **what will next week bring, and under which conditions does it change?** You learn one method family in depth, tree-based models (a decision tree, a random forest, LightGBM): when to use them instead of a regression or clustering, how to test a forecast fairly, how to spot faulty inputs and outputs, also in code an AI wrote for you, and how to explain a forecast.
 
 ## Slides
 
@@ -73,7 +75,7 @@ The trees win where the weather and the promotions bend the sales; for orange ju
 
 ## Your project
 
-If you choose tree-based models for your project, start from [notebook 4, the project template](notebooks/{NB_NAMES[4]}). Run it once unchanged on the course data, then change the `# EDIT` lines to your own table, one section at a time. Its sections follow the report criteria of the course:
+If you choose tree-based models for your project, {TEMPLATE} Run it once unchanged on the course data, then change the `# EDIT` lines to your own table, one section at a time. Its sections follow the report criteria of the course:
 
 | Report criterion | Weight | Template section |
 |---|---|---|
@@ -87,7 +89,7 @@ Share only data you are allowed to share with Colab and with an AI tool, and say
 
 ## How the numbers were made
 
-`analysis/build_evidence.py` executes the code cells of the four notebooks on the data and freezes what they print into `evidence/results.json`; the slides and the `# CHECK` lines read that file, so they show exactly what the notebooks compute. To rebuild on your own computer:
+`analysis/build_evidence.py` executes the code cells of the notebooks on the data and freezes what they print into `evidence/results.json`; the slides and the `# CHECK` lines read that file, so they show exactly what the notebooks compute. To rebuild on your own computer:
 
 ```bash
 python3 -m pip install -r requirements.txt
