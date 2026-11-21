@@ -254,6 +254,9 @@ R["nb2"]["ahead"] = {"weeks": int(n2["AHEAD"]), "one": f(_ah[_lab[0]]), "weather
                      "cost_sales": f(_ah[_lab[1]] - _ah[_lab[0]]), "cost_weather": f(_ah[_lab[2]] - _ah[_lab[1]]),
                      "by_product": {p: {k: f(n2["score"](part["units"], part[l])["WAPE, %"]) for k, l in zip(("one", "weather", "no_weather"), _lab)}
                                     for p, part in _ft.groupby("product")}}
+assert list(n2["HORIZON"]) == [1, 2, 3, 4], "the slide reads weeks 1 to 4 of the one model for the whole horizon"
+R["nb2"]["ahead"]["whole"] = {str(h): f(n2["whole"][f"week {h}"]) for h in n2["HORIZON"]}
+R["nb2"]["ahead"]["whole_rows"] = int(len(n2["stack_train"]))
 # the promotion table: sales against the recent level, cold drinks, the two training years
 cold = ["Mineral water", "Ice tea", "Apple spritzer", "Lager beer", "Radler"]
 pv = n2["sales"][(n2["sales"]["week_start"].dt.year.between(2023, 2024)) & n2["sales"]["product"].isin(cold)].copy()

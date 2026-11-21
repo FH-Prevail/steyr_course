@@ -655,7 +655,15 @@ Everything above forecasts **one week ahead** (single-step): on Sunday evening, 
 - **The newest sales you know are older.** When you forecast four weeks ahead, the week before the one you forecast has not happened yet. The newest sales you know lie four weeks back, so `shift(1)` becomes `shift(4)`.
 - **Some inputs are no longer known.** Nobody has a reliable weather forecast for a week four weeks away. The promotion plan and the calendar are still known.
 
-The cell builds a LightGBM of its own for the week four weeks ahead (the **direct** way), twice: once as if the weather forecast were as good as for next week, which it is not, and once without it. The knobs stay as chosen in section 4.
+There are three ways to forecast further ahead:
+
+| Way | How it works | Watch out |
+|---|---|---|
+| **One model for the whole horizon** | the number of weeks ahead becomes an input; every week appears once per week ahead, and one model forecasts weeks 1 to 4 in one go | a bigger training table |
+| **A model of its own per week ahead** (direct) | a separate model for each week ahead, each built from what is known that early | several models to build and to keep consistent |
+| **Feed the forecast back in** (recursive) | forecast next week, use it as if it were last week's sales, forecast the week after | the errors add up: each step builds on the last guess |
+
+The first cell builds a model of its own for the week four weeks ahead, twice: once as if the weather forecast were as good as for next week, which it is not, and once without it. The second cell builds one model for weeks 1 to 4. The knobs stay as chosen in section 4.
 
 > **Ask an AI** · *"My history inputs last_week and avg_last_4 use shift(1) per product. I want to forecast 4 weeks ahead instead of 1. Rebuild both inputs from the sales known 4 weeks before the forecast week, train the same LightGBM on 2023 and 2024, test on 2025, and compare the WAPE with and without temp_forecast."*
 > **Check:** no input may use sales from less than four weeks before the week it forecasts; the numbers must match the `# CHECK` line.
@@ -663,11 +671,18 @@ The cell builds a LightGBM of its own for the week four weeks ahead (the **direc
     code('''
 AHEAD = 4                      # EDIT: how many weeks ahead, for example 2 or 8
 
-far = sales.copy()
-units_of = far.groupby("product")["units"]
-far["last_week"] = units_of.shift(AHEAD)                                              # the newest sales known that early
-far["avg_last_4"] = units_of.transform(lambda s: s.shift(AHEAD).rolling(4).mean())    # the four weeks up to then
-far = far.dropna(subset=["same_week_last_year"])
+
+def known_early(weeks_ahead):
+    """The table as it looks when you forecast this many weeks ahead: the history inputs use only the sales known that early."""
+    table = sales.copy()
+    units_of = table.groupby("product")["units"]
+    table["last_week"] = units_of.shift(weeks_ahead)                                              # the newest sales known that early
+    table["avg_last_4"] = units_of.transform(lambda s: s.shift(weeks_ahead).rolling(4).mean())    # the four weeks up to then
+    table["weeks_ahead"] = weeks_ahead
+    return table.dropna(subset=["same_week_last_year"])
+
+
+far = known_early(AHEAD)
 far_train = far[far["week_start"].dt.year <= 2024]
 far_test = far[far["week_start"].dt.year == 2025].copy()
 
@@ -687,9 +702,34 @@ ahead.round(1)
 # CHECK: {{nb2.ahead.one|.1f}}, {{nb2.ahead.weather|.1f}} and {{nb2.ahead.no_weather|.1f}} %
 '''),
     md("""
-**What to see.** Older sales alone cost little: {{nb2.ahead.one|.1f}} % becomes {{nb2.ahead.weather|.1f}} %. Without the weather forecast the misses add up to {{nb2.ahead.no_weather|.1f}} % of the cases sold. The further ahead you forecast, the fewer inputs you really know, and that matters more than the model. So forecast as far ahead as your decision needs, and build every input from what you know on that day.
+**What to see.** Older sales alone cost little: {{nb2.ahead.one|.1f}} % becomes {{nb2.ahead.weather|.1f}} %. Without the weather forecast the misses add up to {{nb2.ahead.no_weather|.1f}} % of the cases sold. The further ahead you forecast, the fewer inputs you really know, and that matters more than the model.
 
-The other way to reach further is to feed the model its own forecast as "last week", week after week (the **recursive** way). It needs no second model, but each step builds on the last guess, so the errors add up.
+**The whole horizon in one go.** You do not need a model per week ahead. Stack the tables for 1, 2, 3 and 4 weeks ahead, so every week appears four times, and give the model the number of weeks ahead as one more input. One model then forecasts all four weeks:
+"""),
+    code('''
+HORIZON = [1, 2, 3, 4]         # EDIT: the weeks ahead that one model should cover
+
+stack = pd.concat([known_early(h) for h in HORIZON], ignore_index=True)          # every week once per week ahead
+
+
+def inputs_of(table):
+    """The inputs of section 2 without the weather forecast, plus the number of weeks ahead."""
+    return encode(table).drop(columns="temp_forecast").assign(weeks_ahead=table["weeks_ahead"].to_numpy())
+
+
+stack_train = stack[stack["week_start"].dt.year <= 2024]
+stack_test = stack[stack["week_start"].dt.year == 2025].copy()
+one_model = LGBMRegressor(n_estimators=400, learning_rate=0.05, num_leaves=chosen["LightGBM, num_leaves"], min_child_samples=10,
+                          random_state=42, verbose=-1)
+one_model.fit(inputs_of(stack_train), stack_train["units"])
+stack_test["forecast"] = one_model.predict(inputs_of(stack_test))
+whole = pd.Series({f"week {h}": score(part["units"], part["forecast"])["WAPE, %"] for h, part in stack_test.groupby("weeks_ahead")},
+                  name="One model for the whole horizon, no weather forecast: WAPE on 2025, %")
+whole.round(1)
+# CHECK: {{nb2.ahead.whole.1|.1f}}, {{nb2.ahead.whole.2|.1f}}, {{nb2.ahead.whole.3|.1f}} and {{nb2.ahead.whole.4|.1f}} %
+'''),
+    md("""
+**What to see.** One model covers the whole horizon: for week 4 its misses add up to {{nb2.ahead.whole.4|.1f}} % of the cases sold, as good as the model built for week 4 alone ({{nb2.ahead.no_weather|.1f}} %). Without a weather forecast, week 1 is hardly easier than week 4. So forecast as far ahead as your decision needs, and build every input from what you know on that day.
 
 ### Your answer (not graded; it prepares your project)
 
