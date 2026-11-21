@@ -240,6 +240,20 @@ for p in ["Ice tea", "Energy drink", "Radler", "Mineral water"]:
 fr = test[(test["product"] == "Radler") & (test["week_start"] == "2025-06-23")].iloc[0]
 R["nb2"]["feature_row"] = {k: (fr[k] if isinstance(fr[k], str) else f(fr[k], 1)) for k in n2["FEATURES"]}
 R["nb2"]["feature_row"].update({"week_start": str(fr["week_start"].date()), "units": int(fr["units"])})
+# where the three history inputs of that row come from: Radler's weeks before it (slide "Inputs From The History")
+_h = n2["sales"][(n2["sales"]["product"] == "Radler") & (n2["sales"]["week_start"] <= fr["week_start"])].tail(57)
+R["nb2"]["history_demo"] = {"weeks": [str(d.date()) for d in _h["week_start"]], "units": _h["units"].astype(int).tolist()}
+_u = R["nb2"]["history_demo"]["units"]
+assert abs(_u[-2] - fr["last_week"]) < 0.5 and abs(np.mean(_u[-5:-1]) - fr["avg_last_4"]) < 0.5 and abs(_u[-53] - fr["same_week_last_year"]) < 0.5, \
+    "the history chart and the input row of the Radler week disagree"
+# further ahead than one week (notebook 2, section 8): the same LightGBM, inputs as known four weeks before
+_ah, _ft = n2["ahead"], n2["far_test"]
+_lab = list(n2["variants"])
+assert n2["AHEAD"] == 4 and abs(_ah[_lab[0]] - R["nb2"]["results"]["LightGBM"]["WAPE"]) < 0.05, "section 8 does not start from the LightGBM of section 5"
+R["nb2"]["ahead"] = {"weeks": int(n2["AHEAD"]), "one": f(_ah[_lab[0]]), "weather": f(_ah[_lab[1]]), "no_weather": f(_ah[_lab[2]]),
+                     "cost_sales": f(_ah[_lab[1]] - _ah[_lab[0]]), "cost_weather": f(_ah[_lab[2]] - _ah[_lab[1]]),
+                     "by_product": {p: {k: f(n2["score"](part["units"], part[l])["WAPE, %"]) for k, l in zip(("one", "weather", "no_weather"), _lab)}
+                                    for p, part in _ft.groupby("product")}}
 # the promotion table: sales against the recent level, cold drinks, the two training years
 cold = ["Mineral water", "Ice tea", "Apple spritzer", "Lager beer", "Radler"]
 pv = n2["sales"][(n2["sales"]["week_start"].dt.year.between(2023, 2024)) & n2["sales"]["product"].isin(cold)].copy()

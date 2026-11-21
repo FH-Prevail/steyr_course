@@ -427,7 +427,7 @@ NB2 = [
 - test a decision tree, a random forest and LightGBM once on 2025, against the benchmark and the regression of session 2,
 - find out for which products the trees pay off, and for which a regression is enough.
 
-Sections 1 to 6 are the core; section 7 is optional.
+Sections 1 to 6 are the core; sections 7 and 8 are optional.
 """),
     FIRST,
     CONTEXT,
@@ -441,6 +441,8 @@ A tree cannot look back in time by itself. We give each week three numbers from 
 - `same_week_last_year`: the sales 52 weeks back.
 
 `shift(1)` moves every value one row down, so each week sees the row before it. That is the previous **week** only because our table has every week exactly once, sorted by date within each product; check this in your own data. `shift(-1)` would move next week's sales in: information from the future, called **leakage**. Then `week_of_year` (1 to 52 in our years) from the calendar.
+
+**A word you will meet.** Machine learning texts and AI tools call an input column a **feature**, and building such columns from raw data **feature engineering**. That is all the three lines of `shift` below are, and it is why the list of inputs in the code of section 2 is named `FEATURES`.
 """),
     code('''
 sales = sales.sort_values(["product", "week_start"]).reset_index(drop=True)
@@ -467,7 +469,7 @@ In session 2 the rows were companies, and a random 80/20 split was right. Here t
 - **2023 and 2024** together, to learn the final models,
 - **2025**, the final test, used once.
 
-2022 only feeds the history numbers. **How we forecast:** the final models are trained once, on Sunday 5 January 2025, and then stay fixed. Every Sunday evening of 2025 they forecast the coming week, with that week's weather forecast and plan and the sales up to the week just finished. So the history inputs of a 2025 week use earlier 2025 sales: that is allowed, because they are known by then.
+2022 only feeds the history numbers. **How we forecast:** the final models are trained once, on Sunday 5 January 2025, and then stay fixed. Every Sunday evening of 2025 they forecast the coming week, with that week's weather forecast and plan and the sales up to the week just finished. This is a forecast **one week ahead** (single-step); section 8 looks four weeks ahead. So the history inputs of a 2025 week use earlier 2025 sales: that is allowed, because they are known by then.
 
 The comparisons on 2025 are planned now, before anything is tested: the benchmark, the regression of session 2, three tree models, and a regression per product. The trees need numbers, so `encode` turns the product into eight 0/1 columns, one per product.
 
@@ -645,6 +647,49 @@ score(one["units"], one["LightGBM"]).round(1)
 **Try it.** Change `product` to Radler, Energy drink and Mulled wine. Where does LightGBM follow the actual sales, and where not? Look at the week of 30 June 2025, the hottest of all: we come back to it in notebook 3.
 
 **Try more knobs** (optional): in section 4, add other values, for example `n_estimators` of the forest or `min_child_samples` of LightGBM, run section 4 again, and see whether the choice on 2024 changes. Leave section 5 alone: once you have seen 2025, a new choice would need another untouched year to be tested fairly.
+
+## 8. OPTIONAL: four weeks ahead instead of one
+
+Everything above forecasts **one week ahead** (single-step): on Sunday evening, the coming week. An order with a longer delivery time needs a forecast **several weeks ahead** (multi-step). Then two things change:
+
+- **The newest sales you know are older.** When you forecast four weeks ahead, the week before the one you forecast has not happened yet. The newest sales you know lie four weeks back, so `shift(1)` becomes `shift(4)`.
+- **Some inputs are no longer known.** Nobody has a reliable weather forecast for a week four weeks away. The promotion plan and the calendar are still known.
+
+The cell builds a LightGBM of its own for the week four weeks ahead (the **direct** way), twice: once as if the weather forecast were as good as for next week, which it is not, and once without it. The knobs stay as chosen in section 4.
+
+> **Ask an AI** · *"My history inputs last_week and avg_last_4 use shift(1) per product. I want to forecast 4 weeks ahead instead of 1. Rebuild both inputs from the sales known 4 weeks before the forecast week, train the same LightGBM on 2023 and 2024, test on 2025, and compare the WAPE with and without temp_forecast."*
+> **Check:** no input may use sales from less than four weeks before the week it forecasts; the numbers must match the `# CHECK` line.
+"""),
+    code('''
+AHEAD = 4                      # EDIT: how many weeks ahead, for example 2 or 8
+
+far = sales.copy()
+units_of = far.groupby("product")["units"]
+far["last_week"] = units_of.shift(AHEAD)                                              # the newest sales known that early
+far["avg_last_4"] = units_of.transform(lambda s: s.shift(AHEAD).rolling(4).mean())    # the four weeks up to then
+far = far.dropna(subset=["same_week_last_year"])
+far_train = far[far["week_start"].dt.year <= 2024]
+far_test = far[far["week_start"].dt.year == 2025].copy()
+
+variants = {"next week (section 5)": None,
+            f"{AHEAD} weeks ahead, weather forecast as good as for next week": [],
+            f"{AHEAD} weeks ahead, no weather forecast": ["temp_forecast"]}
+far_test["next week (section 5)"] = test["LightGBM"]                    # the same rows, lined up by their index
+for label, left_out in variants.items():
+    if left_out is None:
+        continue
+    model = LGBMRegressor(n_estimators=400, learning_rate=0.05, num_leaves=chosen["LightGBM, num_leaves"], min_child_samples=10,
+                          random_state=42, verbose=-1)
+    model.fit(encode(far_train).drop(columns=left_out), far_train["units"])
+    far_test[label] = model.predict(encode(far_test).drop(columns=left_out))
+ahead = pd.Series({label: score(far_test["units"], far_test[label])["WAPE, %"] for label in variants}, name="LightGBM, WAPE on 2025, %")
+ahead.round(1)
+# CHECK: {{nb2.ahead.one|.1f}}, {{nb2.ahead.weather|.1f}} and {{nb2.ahead.no_weather|.1f}} %
+'''),
+    md("""
+**What to see.** Older sales alone cost little: {{nb2.ahead.one|.1f}} % becomes {{nb2.ahead.weather|.1f}} %. Without the weather forecast the misses add up to {{nb2.ahead.no_weather|.1f}} % of the cases sold. The further ahead you forecast, the fewer inputs you really know, and that matters more than the model. So forecast as far ahead as your decision needs, and build every input from what you know on that day.
+
+The other way to reach further is to feed the model its own forecast as "last week", week after week (the **recursive** way). It needs no second model, but each step builds on the last guess, so the errors add up.
 
 ### Your answer (not graded; it prepares your project)
 
