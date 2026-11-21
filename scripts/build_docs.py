@@ -18,6 +18,8 @@ D, N2 = R["data"], R["nb2"]
 RES = N2["results"]
 BADGE = "https://colab.research.google.com/assets/colab-badge.svg"
 PDF = "slides/S4_Forecasting_With_Trees.pdf"
+_owner, _name = REPO.split("/")
+PAGES = f"https://{_owner.lower()}.github.io/{_name}/slides/S4_Forecasting_With_Trees.html"      # GitHub Pages serves the repository
 
 WHAT = {1: "Hands-on 1: the straight line from session 2 against your first decision tree, for ice tea; how deep a tree should grow",
         2: "Hands-on 2: a random forest and LightGBM for all eight products, tested on 2025 against a benchmark and the regression",
@@ -38,6 +40,8 @@ Course material for session 4: the slides, {'four' if 4 in ON_COURSE_PAGE else '
 ## Slides
 
 [The slides as PDF]({PDF})
+
+[The slides in the browser]({PAGES}), building step by step: right arrow for the next step, down arrow for the next slide, O for an overview.
 
 ## Notebooks
 

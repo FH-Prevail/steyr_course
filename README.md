@@ -8,6 +8,8 @@ Course material for session 4: the slides, three Colab notebooks and one synthet
 
 [The slides as PDF](slides/S4_Forecasting_With_Trees.pdf)
 
+[The slides in the browser](https://fh-prevail.github.io/steyr_course/slides/S4_Forecasting_With_Trees.html), building step by step: right arrow for the next step, down arrow for the next slide, O for an overview.
+
 ## Notebooks
 
 | Notebook | What it is for | Open in Colab |
